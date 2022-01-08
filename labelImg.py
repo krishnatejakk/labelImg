@@ -105,7 +105,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Whether we need to save or not.
         self.dirty = False
-
         self._no_selection_slot = False
         self._beginner = True
         self.screencast = "https://youtu.be/p0nR2YsCY_U"
@@ -122,48 +121,58 @@ class MainWindow(QMainWindow, WindowMixin):
 
         list_layout = QVBoxLayout()
         list_layout.setContentsMargins(0, 0, 0, 0)
-
+        self.start_button = QPushButton(get_str('startLabeling'))
+        self.verify_button = QPushButton(get_str('acceptLabel'))
+        self.label_change = LabelDialog(parent=self, list_item=self.label_hist)
+        self.end_button = QPushButton(get_str('endLabeling'))
         # Create a widget for using default label
-        self.use_default_label_checkbox = QCheckBox(get_str('useDefaultLabel'))
-        self.use_default_label_checkbox.setChecked(False)
-        self.default_label_text_line = QLineEdit()
-        use_default_label_qhbox_layout = QHBoxLayout()
-        use_default_label_qhbox_layout.addWidget(self.use_default_label_checkbox)
-        use_default_label_qhbox_layout.addWidget(self.default_label_text_line)
+        #self.use_default_label_checkbox = QCheckBox(get_str('useDefaultLabel'))
+        #self.use_default_label_checkbox.setChecked(False)
+        #self.default_label_text_line = QLineEdit()
+        list_layout.addWidget(self.start_button)
+        self.curr_label = QLabel('current_label')
+        label_qhbox_layout = QHBoxLayout()
+        label_qhbox_layout.addWidget(self.curr_label)
+        label_qhbox_layout.addWidget(self.verify_button)
         use_default_label_container = QWidget()
-        use_default_label_container.setLayout(use_default_label_qhbox_layout)
-
-        # Create a widget for edit and diffc button
-        self.diffc_button = QCheckBox(get_str('useDifficult'))
-        self.diffc_button.setChecked(False)
-        self.diffc_button.stateChanged.connect(self.button_state)
-        self.edit_button = QToolButton()
-        self.edit_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        use_default_label_container.setLayout(label_qhbox_layout)
+        list_layout.addWidget(use_default_label_container)
+        list_layout.addWidget(self.label_change)
+        list_layout.addWidget(self.end_button)
+        #use_default_label_qhbox_layout.addWidget(self.use_default_label_checkbox)
+        #use_default_label_qhbox_layout.addWidget(self.default_label_text_line)
+        
+        # # Create a widget for edit and diffc button
+        # self.diffc_button = QCheckBox(get_str('useDifficult'))
+        # self.diffc_button.setChecked(False)
+        # self.diffc_button.stateChanged.connect(self.button_state)
+        #self.edit_button = QToolButton()
+        #self.edit_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         # Add some of widgets to list_layout
-        list_layout.addWidget(self.edit_button)
-        list_layout.addWidget(self.diffc_button)
-        list_layout.addWidget(use_default_label_container)
+        #list_layout.addWidget(self.edit_button)
+        # list_layout.addWidget(self.diffc_button)
+        
 
         # Create and add combobox for showing unique labels in group
-        self.combo_box = ComboBox(self)
-        list_layout.addWidget(self.combo_box)
+        #self.combo_box = ComboBox(self)
+        #list_layout.addWidget(self.combo_box)
 
         # Create and add a widget for showing current label items
         self.label_list = QListWidget()
         label_list_container = QWidget()
         label_list_container.setLayout(list_layout)
-        self.label_list.itemActivated.connect(self.label_selection_changed)
-        self.label_list.itemSelectionChanged.connect(self.label_selection_changed)
-        self.label_list.itemDoubleClicked.connect(self.edit_label)
-        # Connect to itemChanged to detect checkbox changes.
-        self.label_list.itemChanged.connect(self.label_item_changed)
-        list_layout.addWidget(self.label_list)
+        # self.label_list.itemActivated.connect(self.label_selection_changed)
+        # self.label_list.itemSelectionChanged.connect(self.label_selection_changed)
+        # self.label_list.itemDoubleClicked.connect(self.edit_label)
+        # # Connect to itemChanged to detect checkbox changes.
+        # self.label_list.itemChanged.connect(self.label_item_changed)
+        # list_layout.addWidget(self.label_list)
 
 
 
         self.dock = QDockWidget(get_str('boxLabelText'), self)
-        self.dock.setObjectName(get_str('labels'))
+        #self.dock.setObjectName(get_str('labels'))
         self.dock.setWidget(label_list_container)
 
         self.file_list_widget = QListWidget()
@@ -327,7 +336,7 @@ class MainWindow(QMainWindow, WindowMixin):
         edit = action(get_str('editLabel'), self.edit_label,
                       'Ctrl+E', 'edit', get_str('editLabelDetail'),
                       enabled=False)
-        self.edit_button.setDefaultAction(edit)
+        #self.edit_button.setDefaultAction(edit)
 
         shape_line_color = action(get_str('shapeLineColor'), self.choose_shape_line_color,
                                   icon='color_line', tip=get_str('shapeLineColorDetail'),
@@ -341,11 +350,11 @@ class MainWindow(QMainWindow, WindowMixin):
         labels.setShortcut('Ctrl+Shift+L')
 
         # Label list context menu.
-        label_menu = QMenu()
-        add_actions(label_menu, (edit, delete))
-        self.label_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.label_list.customContextMenuRequested.connect(
-            self.pop_label_list_menu)
+        #label_menu = QMenu()
+        #add_actions(label_menu, (edit, delete))
+        #self.label_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        #self.label_list.customContextMenuRequested.connect(
+        #    self.pop_label_list_menu)
 
         # Draw squares/rectangles
         self.draw_squares_option = QAction(get_str('drawSquares'), self)
@@ -379,8 +388,8 @@ class MainWindow(QMainWindow, WindowMixin):
             edit=self.menu(get_str('menu_edit')),
             view=self.menu(get_str('menu_view')),
             help=self.menu(get_str('menu_help')),
-            recentFiles=QMenu(get_str('menu_openRecent')),
-            labelList=label_menu)
+            recentFiles=QMenu(get_str('menu_openRecent')),)
+            #labelList=label_menu)
 
         # Auto saving : Enable auto saving if pressing next
         self.auto_saving = QAction(get_str('autoSaveMode'), self)
