@@ -12,10 +12,8 @@ BB = QDialogButtonBox
 
 
 class LabelDialog(QDialog):
-
     def __init__(self, text="Enter object label", parent=None, list_item=None):
         super(LabelDialog, self).__init__(parent)
-
         self.edit = QLineEdit()
         self.edit.setText(text)
         self.edit.setValidator(label_validator())
