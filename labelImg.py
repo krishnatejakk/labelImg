@@ -3,6 +3,7 @@
 import argparse
 import copy
 import codecs
+from statistics import median, mean
 import distutils.spawn
 import os.path
 import platform
@@ -98,6 +99,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # Save as Pascal voc xml
         self.default_save_dir = default_save_dir
         self.timing_file = os.path.join(self.default_save_dir, 'timing.csv')
+        self.timing_summary = os.path.join(self.default_save_dir, 'timing_summary.csv')
         # if os.path.exists(self.timing_file):
         #     df = pd.read_csv(self.timing_file)
         #     self.timing = list(df['timing'])
@@ -113,6 +115,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.change = []
         self.gt_labels = []
         self.images = []
+        self.change_timings = []
+        self.verify_timings = []
     
         # self.label_file_format = settings.get(SETTING_LABEL_FILE_FORMAT, LabelFileFormat.PASCAL_VOC)
         self.labeling_flag = False
@@ -222,7 +226,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.addDockWidget(Qt.RightDockWidgetArea, self.session_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.labeling_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.image_dock)
-        
+        # self.image_dock.hide()
         self.file_dock.setFeatures(QDockWidget.DockWidgetFloatable)
         self.dock_features = QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetFloatable
         self.session_dock.setFeatures(self.session_dock.features() ^ self.dock_features)
@@ -241,6 +245,8 @@ class MainWindow(QMainWindow, WindowMixin):
         change_save_dir = action(get_str('changeSaveDir'), self.change_save_dir_dialog,
                                  'Ctrl+r', 'open', get_str('changeSavedAnnotationDir'), 
                                   )
+
+        load_labels = action("Change Label File", self.change_label_file, 'Ctrl+l', 'open', 'Change Label File')
 
         save = action(get_str('save'), self.save_file,
                       'Ctrl+S', 'save', get_str('saveDetail'), enabled=False)
@@ -315,6 +321,7 @@ class MainWindow(QMainWindow, WindowMixin):
                               fileMenuActions=(
                                   open, open_dir, save, save_as, close, reset_all, quit),
                               beginner=(), advanced=(),
+                              loadLabels = load_labels
                             #   editMenu=(edit, #copy, delete,
                             #             None, color1, self.draw_squares_option),
                             #   beginnerContext=(create, edit, copy, delete),
@@ -347,6 +354,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         add_actions(self.menus.file,
                     (open, open_dir, change_save_dir, 
+                    load_labels,
                     #open_annotation, copy_prev_bounding, 
                     self.menus.recentFiles, save, #save_format,
                      save_as, close, reset_all, delete_image, quit))
@@ -368,6 +376,7 @@ class MainWindow(QMainWindow, WindowMixin):
             open, 
             open_dir, 
             change_save_dir, 
+            load_labels,
             #open_next_image, 
             #open_prev_image, 
             #verify, 
@@ -379,7 +388,9 @@ class MainWindow(QMainWindow, WindowMixin):
             zoom_in, zoom, zoom_out, fit_window, fit_width)
 
         self.actions.advanced = (
-            open, open_dir, change_save_dir, 
+            open, open_dir, 
+            change_save_dir, 
+            load_labels,
             #open_next_image,
             #open_prev_image, 
             # save, 
@@ -814,8 +825,6 @@ class MainWindow(QMainWindow, WindowMixin):
             self.image = image
             self.file_path = unicode_file_path
             self.canvas.load_pixmap(QPixmap.fromImage(image))
-            if self.label_file:
-                self.load_labels(self.label_file.shapes)
             self.set_clean()
             self.canvas.setEnabled(True)
             self.adjust_scale(initial=True)
@@ -838,6 +847,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.string_bundle = StringBundle.get_bundle()
         self.end_button.setEnabled(True)
         self.end_button.show()
+        # self.image_dock.show()
         
     def end_labeling(self):
         #self.start_button.toggle()
@@ -854,9 +864,31 @@ class MainWindow(QMainWindow, WindowMixin):
         df = pd.DataFrame(df_dict)
         with open(self.timing_file, 'w') as csv_file:
             df.to_csv(csv_file)
+        if self.verify_timings == []:
+                mean_verify = 0
+                median_verify = 0
+        else:
+            mean_verify = mean(self.verify_timings)
+            median_verify = median(self.verify_timings)                
+
+        if self.change_timings == []:
+            mean_change = 0
+            median_change = 0
+        else:
+            mean_change = mean(self.change_timings)
+            median_change = median(self.change_timings)
+
+        summary_dict ={'change': [0, 1], 
+                        'Average Time':[mean_verify, mean_change], 
+                        'Median Time':[median_verify, median_change]}
+
+        df = pd.DataFrame(summary_dict)
+        with open(self.timing_summary, 'w') as csv_file:
+            df.to_csv(csv_file)
         self.start_button.setEnabled(True)
         self.start_button.show()
-        
+        # self.image_dock.hide()
+
     def counter_str(self):
         """
         Converts image counter to string representation.
@@ -943,6 +975,7 @@ class MainWindow(QMainWindow, WindowMixin):
                     path = ustr(os.path.abspath(relative_path))
                     images.append(path)
         natural_sort(images, key=lambda x: x.lower())
+        random.shuffle(images)
         return images
 
     def change_save_dir_dialog(self, _value=False):
@@ -957,6 +990,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         if dir_path is not None and len(dir_path) > 1:
             self.default_save_dir = dir_path
+        
+        self.timing_file = os.path.join(self.default_save_dir, 'timing.csv')
+        self.timing_summary = os.path.join(self.default_save_dir, 'timing_summary.csv')
 
         self.statusBar().showMessage('%s . Annotation will be saved to %s' %
                                      ('Change saved folder', self.default_save_dir))
@@ -1030,9 +1066,12 @@ class MainWindow(QMainWindow, WindowMixin):
             self.gt_labels.append(self.gt_label)
             if self.human_labels[-1] == self.weak_labels[-1]:
                 self.change.append(0)
+                self.verify_timings.append(self.timing[-1])
             else:
                 self.change.append(1)
-            
+                self.change_timings.append(self.timing[-1])
+
+
             df_dict = {'images':self.images,
                    'timing':self.timing,
                    'human_labels':self.human_labels,
@@ -1044,7 +1083,27 @@ class MainWindow(QMainWindow, WindowMixin):
             df = pd.DataFrame(df_dict)
             with open(self.timing_file, 'w') as csv_file:
                 df.to_csv(csv_file)
+            if self.verify_timings == []:
+                mean_verify = 0
+                median_verify = 0
+            else:
+                mean_verify = mean(self.verify_timings)
+                median_verify = median(self.verify_timings)                
 
+            if self.change_timings == []:
+                mean_change = 0
+                median_change = 0
+            else:
+                mean_change = mean(self.change_timings)
+                median_change = median(self.change_timings)
+
+            summary_dict ={'change': [0, 1], 
+                            'Average Time':[mean_verify, mean_change], 
+                            'Median Time':[median_verify, median_change]}
+            df = pd.DataFrame(summary_dict)
+            with open(self.timing_summary, 'w') as csv_file:
+                df.to_csv(csv_file)
+            
             self.prev_timestamp = time.time()
             
         if self.auto_saving.isChecked():
@@ -1198,6 +1257,21 @@ class MainWindow(QMainWindow, WindowMixin):
             with open(label_file, 'rb') as file:
                 self.m_lbl_array = pickle.load(file)
 
+    def change_label_file(self):
+        if self.default_save_dir is not None:
+            path = ustr(self.default_save_dir)
+        else:
+            path = '.'
+        formats = ['*.pickle', '*.pkl']
+        filters = "Class Info files (%s)" % ' '.join(formats)
+        filename = QFileDialog.getOpenFileName(self, '%s - Choose Class Info file' % __appname__, path, filters)
+        if filename:
+            if isinstance(filename, (tuple, list)):
+                filename = filename[0]
+            self.load_predefined_classes(filename)
+            self.load_labels(filename)
+
+
 def inverted(color):
     return QColor(*[255 - v for v in color.getRgb()])
 
@@ -1226,10 +1300,10 @@ def get_main_app(argv=None):
     #                        default=os.path.join(os.path.dirname(__file__), "data", "predefined_classes.txt"),
     #                        nargs="?")
     argparser.add_argument("label_file",
-                           default=r"C:\Users\krish\Downloads\dataset_samples\dataset_samples\cifar10\class_info.pkl",
+                           default=r"C:\Users\krish\Downloads\dataset_samples\dataset_samples\stl10\class_info.pkl",
                            nargs="?")
     argparser.add_argument("save_dir",
-                           default=r"C:\Users\krish\Downloads\dataset_samples\dataset_samples\cifar10",
+                           default=r"C:\Users\krish\Downloads\dataset_samples\dataset_samples\stl10",
                            nargs="?")
     argparser.add_argument("p",
                             default=0.5,
