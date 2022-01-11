@@ -375,7 +375,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.beginner = (
             change_save_dir, 
             load_labels,
-            open, 
+            #open, 
             open_dir, 
             
             #open_next_image, 
@@ -391,7 +391,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.advanced = (
             change_save_dir, 
             load_labels,
-            open, open_dir, 
+            #open,
+            open_dir, 
             #open_next_image,
             #open_prev_image, 
             # save, 
