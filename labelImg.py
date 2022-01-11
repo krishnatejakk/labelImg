@@ -799,7 +799,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.image_data = read(unicode_file_path, None)
                 self.label_file = None
                 self.canvas.verified = False
-                self.image_name = os.path.basename(unicode_file_path)[-1]
+                self.image_name = os.path.basename(unicode_file_path)
                 self.label_set = list(set(self.m_lbl_array))
                 if self.image_name.split(".")[0].isdigit():
                     self.gt_label = self.m_lbl_array[int(self.image_name.split(".")[0])]
