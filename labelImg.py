@@ -1274,6 +1274,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 filename = filename[0]
             self.load_predefined_classes(filename)
             self.load_labels(filename)
+        self.label_change.update_items(self.label_hist)
 
 
 def inverted(color):
