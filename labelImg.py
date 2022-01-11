@@ -803,7 +803,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.label_set = list(set(self.m_lbl_array))
                 if self.image_name.split(".")[0].isdigit():
                     self.gt_label = self.m_lbl_array[int(self.image_name.split(".")[0])]
-                if random.random() < self.p:
+                if random.random() <= self.p:
                     self.weak_label = self.gt_label
                 else:
                     tmp = copy.deepcopy(self.label_set)
