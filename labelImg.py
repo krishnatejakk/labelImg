@@ -1067,10 +1067,12 @@ class MainWindow(QMainWindow, WindowMixin):
             self.gt_labels.append(self.gt_label)
             if self.human_labels[-1] == self.weak_labels[-1]:
                 self.change.append(0)
-                self.verify_timings.append(self.timing[-1])
+                if self.human_labels[-1] == self.gt_labels[-1]:
+                    self.verify_timings.append(self.timing[-1])
             else:
                 self.change.append(1)
-                self.change_timings.append(self.timing[-1])
+                if self.human_labels[-1] == self.gt_labels[-1]:
+                    self.change_timings.append(self.timing[-1])
 
 
             df_dict = {'images':self.images,
